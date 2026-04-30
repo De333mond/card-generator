@@ -1,0 +1,7 @@
+[project]
+name = "zalupa-dlya-kirilla"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["fastapi>=0.115", "pillow>=11.0", "uvicorn>=0.30"]
