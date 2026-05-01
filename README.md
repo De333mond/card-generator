@@ -5,13 +5,14 @@ Small FastAPI app for the first card type: ability cards.
 ## What it does
 
 - Serves a simple editor page with a live preview.
-- Renders the card as a PNG from the same inputs.
-- Uses a plain FastAPI + Pillow stack, with a minimal Dockerfile.
+- Renders the card as a PNG by turning HTML/CSS into an image.
+- Uses a plain FastAPI stack with a minimal Dockerfile.
 
 ## Run locally
 
 ```bash
 uv sync
+uv run playwright install chromium
 uv run uvicorn src.main:app --reload
 ```
 

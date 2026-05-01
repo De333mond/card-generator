@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tablegame Card Generator</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+    <main class="shell">
+        <section class="card">
+            <form id="card-form" method="get" action="/">
+                <div class="field">
+                    <label for="title">Название карты</label>
+                    <input id="title" name="title" type="text" value="Карта способности" />
+                </div>
+                <div class="field">
+                    <label for="creature">Название существа</label>
+                    <input id="creature" name="creature" type="text" value="Существо" />
+                </div>
+                <div class="field">
+                    <label for="icon">Подпись иконки</label>
+                    <input id="icon" name="icon" type="text" value="DDS" />
+                </div>
+                <div class="field">
+                    <label for="icon-file">DDS иконка</label>
+                    <input id="icon-file" type="file" accept=".dds,image/vnd.ms-dds" />
+                    <input id="icon-data" name="icon_data" type="hidden" value="" />
+                    <div id="icon-dropzone" class="dropzone" tabindex="0" role="button" aria-label="Загрузить DDS иконку">
+                        <div class="dropzone-title">Перетащи DDS файл сюда или нажми, чтобы выбрать</div>
+                        <div id="icon-status" class="dropzone-status">Иконка не загружена, используется заглушка.</div>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="description">Описание</label>
+                    <textarea id="description" name="description">Короткое описание способности.
+
+Здесь можно собрать текст под конкретную карту.</textarea>
+                </div>
+                <div class="field phases">
+                    <div class="group-title">Фазы</div>
+                    <div class="phase-row">
+                        <label class="phase-chip"><input type="checkbox" name="phase1" checked /> Передвижение</label>
+                        <label class="phase-chip"><input type="checkbox" name="phase2" checked /> Атака</label>
+                        <label class="phase-chip"><input type="checkbox" name="phase3" checked /> Строительство</label>
+                        <label class="phase-chip"><input type="checkbox" name="phase4" checked /> Изучение</label>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="button primary" type="submit" onclick="event.preventDefault(); return false;">Обновить превью</button>
+                    <a class="button secondary" href="#" download>Скачать PNG</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="preview">
+            <div class="preview-head">
+                <h2>Превью карты</h2>
+                <div class="hint">/cards/ability.png</div>
+            </div>
+            <img id="card-preview" src="" alt="Ability card preview" />
+        </section>
+    </main>
+    <script src="/static/script.js"></script>
+</body>
+</html>

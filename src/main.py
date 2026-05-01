@@ -3,18 +3,20 @@ from __future__ import annotations
 import base64
 from io import BytesIO
 import re
+from pathlib import Path
 from textwrap import wrap
 from urllib.parse import quote, urlencode
 import html
 
+from playwright.sync_api import sync_playwright
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
 from PIL import Image, ImageDraw, ImageFont
 
 app = FastAPI(title="Tablegame Card Generator")
 
-CARD_WIDTH = 1400
-CARD_HEIGHT = 900
+CARD_WIDTH = 900
+CARD_HEIGHT = 1400
 PAGE_TITLE = "Tablegame Card Generator"
 PHASE_LABELS = [
     "Передвижение",
@@ -22,6 +24,15 @@ PHASE_LABELS = [
     "Строительство",
     "Изучение",
 ]
+PHASE_ICON_FILES = [
+    "move-alt-svgrepo-com.svg",
+    "sword-fill-svgrepo-com.svg",
+    "hammer-fill-svgrepo-com.svg",
+    "education-book-learn-school-library-svgrepo-com.svg",
+]
+PHASE_ICON_KINDS = ["move", "attack", "hammer", "book"]
+PHASE_ICON_DIR = Path(__file__).resolve().parent / "public" / "icons"
+PHASE_ICON_SIZE = 112
 
 
 def _font(
@@ -144,34 +155,189 @@ def _wrap_text(text: str, font: ImageFont.ImageFont, max_width: int) -> list[str
     return lines or [""]
 
 
-def _draw_chevron(
-    draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], active: bool
-) -> None:
-    left, top, right, bottom = box
-    mid_y = (top + bottom) / 2
-    color = (250, 208, 97) if active else (92, 103, 130)
-    outline = (255, 239, 199) if active else (132, 144, 172)
-    points = [
-        (left, top + 6),
-        (right - 20, top + 6),
-        (right, mid_y),
-        (right - 20, bottom - 6),
-        (left, bottom - 6),
-        (left + 20, mid_y),
-    ]
-    draw.polygon(points, fill=color, outline=outline)
+def _svg_markup(file_name: str) -> str:
+    svg_text = (PHASE_ICON_DIR / file_name).read_text(encoding="utf-8")
+    svg_text = re.sub(r"<\?xml.*?\?>", "", svg_text, count=1, flags=re.DOTALL)
+    return svg_text.strip()
 
 
-def _draw_phase_label(
-    draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], text: str, active: bool
-) -> None:
-    left, top, right, bottom = box
-    font = _font(22, bold=True)
-    fill = (245, 248, 255) if active else (165, 177, 204)
-    label_width = _text_width(text, font)
-    draw.text(
-        ((left + right - label_width) / 2, bottom + 10), text, fill=fill, font=font
+def _svg_phase_icon(index: int, active: bool) -> str:
+    color = "#fadc61" if active else "#0b0f18"
+    kind = PHASE_ICON_KINDS[index]
+    return (
+        f'<span class="phase-icon phase-icon-{kind}" style="color:{color};">'
+        f"{_svg_markup(PHASE_ICON_FILES[index])}</span>"
     )
+
+
+def _icon_data_uri(icon_data: str) -> str | None:
+    icon_image = _load_icon_image(icon_data)
+    if icon_image is None:
+        return None
+
+    output = BytesIO()
+    icon_image.save(output, format="PNG")
+    encoded = base64.b64encode(output.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+def _render_ability_card_html(
+    title: str,
+    creature: str,
+    description: str,
+    icon_label: str,
+    phases: list[bool],
+    icon_data: str = "",
+) -> str:
+    def encoded(value: str) -> str:
+        return html.escape(value, quote=True)
+
+    icon_uri = _icon_data_uri(icon_data)
+    phase_items = []
+    for index, active in enumerate(phases):
+        phase_items.append(
+            f"<div class='phase-cell'>{_svg_phase_icon(index, active)}</div>"
+        )
+
+    phase_html = "".join(phase_items)
+    icon_html = (
+        f"<img class='card-icon-image' src='{encoded(icon_uri)}' alt='Icon' />"
+        if icon_uri
+        else f"<div class='card-icon-placeholder'>{encoded(icon_label[:3] or 'DDS')}</div>"
+    )
+
+    safe_description = encoded(description.strip() or "Здесь будет описание способности.")
+    safe_description = safe_description.replace("\n", "<br />")
+
+    return f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <style>
+        * {{ box-sizing: border-box; }}
+        html, body {{ margin: 0; padding: 0; width: 100%; height: 100%; }}
+        body {{
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(circle at top left, rgba(89, 115, 174, 0.25), transparent 34%),
+                radial-gradient(circle at top right, rgba(219, 166, 71, 0.18), transparent 28%),
+                linear-gradient(180deg, #07101f 0%, #0a1224 100%);
+            color: #eef3ff;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }}
+        .card {{
+            width: 900px;
+            height: 1400px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 44px;
+            background:
+                linear-gradient(180deg, rgba(18, 28, 56, 0.32), rgba(16, 24, 45, 0.1)),
+                linear-gradient(180deg, #11182d 0%, #1e2a4a 100%);
+            box-shadow: 0 36px 120px rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(167, 186, 224, 0.34);
+            padding: 48px;
+        }}
+        .card::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 0%, rgba(252, 230, 145, 0.16), transparent 26%),
+                radial-gradient(circle at 80% 8%, rgba(123, 152, 220, 0.2), transparent 24%);
+            pointer-events: none;
+        }}
+        .panel-shadow {{
+            position: absolute;
+            inset: 48px;
+            border-radius: 44px;
+            box-shadow: inset 0 0 0 1px rgba(167, 186, 224, 0.18), 0 14px 0 rgba(0, 0, 0, 0.12);
+            pointer-events: none;
+        }}
+        .card-content {{ position: relative; z-index: 1; height: 100%; display: grid; grid-template-rows: auto auto auto 1fr; }}
+        .card-content {{ display: flex; flex-direction: column; }}
+        .card-icon-wrap {{ display: flex; justify-content: center; margin-top: 28px; }}
+        .card-icon {{
+            width: 250px;
+            height: 250px;
+            border-radius: 28px;
+            background: rgba(34, 46, 72, 0.98);
+            border: 5px solid rgba(116, 136, 180, 1);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }}
+        .card-icon-image {{ width: 100%; height: 100%; object-fit: contain; padding: 14px; }}
+        .card-icon-placeholder {{
+            font-size: 42px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #eff5ff;
+        }}
+        .title {{ margin-top: 42px; text-align: center; font-size: 54px; line-height: 1.05; font-weight: 700; color: #f5f8ff; }}
+        .creature {{ margin-top: 12px; text-align: center; font-size: 32px; color: #aabbdc; }}
+        .phases {{ margin-top: 56px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: start; }}
+        .phase-cell {{ display: flex; justify-content: center; align-items: flex-start; min-height: 96px; }}
+        .phase-icon {{ display: inline-flex; width: 96px; height: 96px; }}
+        .phase-icon svg {{ width: 100%; height: 100%; display: block; }}
+        .phase-icon-move svg path {{ fill: none; stroke: currentColor; }}
+        .phase-icon-attack svg path {{ fill: currentColor; stroke: none; }}
+        .phase-icon-attack svg path[fill="none"] {{ fill: none; }}
+        .phase-icon-hammer svg path {{ fill: currentColor; stroke: none; }}
+        .phase-icon-book svg path {{ stroke: none; }}
+        .phase-icon-book svg path:first-of-type {{ fill: none; }}
+        .phase-icon-book svg path:last-of-type {{ fill: currentColor; }}
+        .body {{
+            margin-top: 28px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-radius: 32px;
+            background: rgba(30, 42, 74, 0.98);
+            padding: 30px 34px 34px;
+            min-height: 0;
+        }}
+        .body h2 {{ margin: 0 0 18px; font-size: 26px; color: #c6d6f2; }}
+        .body p {{ margin: 0; font-size: 32px; line-height: 1.45; color: #f2f5fc; white-space: normal; word-break: break-word; flex: 1; }}
+    </style>
+</head>
+<body>
+    <section class="card" id="card">
+        <div class="panel-shadow"></div>
+        <div class="card-content">
+            <div class="card-icon-wrap"><div class="card-icon">{icon_html}</div></div>
+            <div class="title">{encoded(title)}</div>
+            <div class="creature">{encoded(creature)}</div>
+            <div class="phases">{phase_html}</div>
+            <div class="body">
+                <h2>Описание</h2>
+                <p>{safe_description}</p>
+            </div>
+        </div>
+    </section>
+</body>
+</html>"""
+
+
+def _render_html_to_png(html_content: str) -> bytes:
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True, args=["--no-sandbox"])
+        try:
+            context = browser.new_context(
+                viewport={"width": CARD_WIDTH, "height": CARD_HEIGHT},
+                device_scale_factor=2,
+            )
+            try:
+                page = context.new_page()
+                page.set_content(html_content, wait_until="load")
+                card = page.locator("#card")
+                card.wait_for(state="visible")
+                return card.screenshot(type="png")
+            finally:
+                context.close()
+        finally:
+            browser.close()
 
 
 def _make_placeholder_icon(
@@ -229,392 +395,22 @@ def generate_ability_card_png(
     phases: list[bool],
     icon_data: str = "",
 ) -> bytes:
-    canvas = Image.new("RGBA", (CARD_WIDTH, CARD_HEIGHT), (12, 18, 36, 255))
-    draw = ImageDraw.Draw(canvas)
-
-    for y in range(CARD_HEIGHT):
-        blend = y / max(1, CARD_HEIGHT - 1)
-        red = int(18 + (34 - 18) * blend)
-        green = int(28 + (56 - 28) * blend)
-        blue = int(52 + (96 - 52) * blend)
-        draw.line((0, y, CARD_WIDTH, y), fill=(red, green, blue, 255))
-
-    margin = 50
-    panel = (margin, margin, CARD_WIDTH - margin, CARD_HEIGHT - margin)
-    shadow = (panel[0] + 10, panel[1] + 14, panel[2] + 10, panel[3] + 14)
-    draw.rounded_rectangle(shadow, radius=44, fill=(0, 0, 0, 90))
-    draw.rounded_rectangle(
-        panel, radius=44, fill=(21, 30, 54), outline=(120, 140, 188), width=4
+    html_content = _render_ability_card_html(
+        title, creature, description, icon_label, phases, icon_data
     )
-
-    icon_box = (90, 90, 330, 330)
-    icon_image = _load_icon_image(icon_data)
-    if icon_image is None:
-        _make_placeholder_icon(draw, icon_box, icon_label)
-    else:
-        _paste_icon(canvas, icon_image, icon_box)
-
-    title_font = _font(58, bold=True)
-    creature_font = _font(34)
-    phase_font = _font(28, bold=True)
-    body_font = _font(34)
-
-    draw.text((370, 96), title, font=title_font, fill=(245, 248, 255))
-    draw.text((370, 172), creature, font=creature_font, fill=(170, 188, 220))
-
-    phase_y = 240
-    arrow_start_x = 370
-    arrow_width = 145
-    arrow_gap = 18
-    for index, active in enumerate(phases):
-        left = arrow_start_x + index * (arrow_width + arrow_gap)
-        arrow_box = (left, phase_y, left + arrow_width, phase_y + 68)
-        _draw_chevron(draw, arrow_box, active)
-        _draw_phase_label(draw, arrow_box, PHASE_LABELS[index], active)
-
-    body_top = 420
-    body_left = 90
-    body_width = CARD_WIDTH - 2 * body_left
-    draw.rounded_rectangle(
-        (body_left, body_top, CARD_WIDTH - body_left, CARD_HEIGHT - 100),
-        radius=32,
-        fill=(30, 42, 74),
-    )
-    draw.text(
-        (body_left + 34, body_top + 28),
-        "Описание",
-        font=phase_font,
-        fill=(198, 214, 242),
-    )
-
-    wrapped = _wrap_text(
-        description.strip() or "Здесь будет описание способности.",
-        body_font,
-        body_width - 68,
-    )
-    line_height = _text_height(body_font) + 12
-    text_y = body_top + 84
-    for line in wrapped:
-        draw.text((body_left + 34, text_y), line, font=body_font, fill=(242, 245, 252))
-        text_y += line_height
-
-    output = BytesIO()
-    canvas.save(output, format="PNG")
-    return output.getvalue()
+    return _render_html_to_png(html_content)
 
 
-def _card_preview_html(request: Request) -> str:
-    title = _query_value(request, "title", "Карта способности")
-    creature = _query_value(request, "creature", "Существо")
-    description = _query_value(
-        request,
-        "description",
-        "Короткое описание способности.\n\nЗдесь можно собрать текст под конкретную карту.",
-    )
-    icon_label = _query_value(request, "icon", "DDS")
-    icon_data = _query_value(request, "icon_data", "")
-    phases = _phase_flags(request)
+import os
+from fastapi.staticfiles import StaticFiles
 
-    query = _query_string(title, creature, description, icon_label, phases)
-    image_url = f"/cards/ability.png?{query}"
-    download_filename = _download_filename(title)
-
-    def checked(index: int) -> str:
-        return "checked" if phases[index] else ""
-
-    def encoded(value: str) -> str:
-        return html.escape(value, quote=True)
-
-    description_value = encoded(description)
-
-    return f"""<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{encoded(PAGE_TITLE)}</title>
-    <style>
-        :root {{
-            color-scheme: dark;
-            --bg: #0a1224;
-            --panel: rgba(18, 27, 50, 0.86);
-            --panel-strong: #162038;
-            --text: #eef3ff;
-            --muted: #9eb0d2;
-            --line: rgba(160, 182, 230, 0.22);
-            --accent: #f5c85a;
-            --accent-strong: #ffe39a;
-        }}
-        * {{ box-sizing: border-box; }}
-        body {{
-            margin: 0;
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background:
-                radial-gradient(circle at top left, rgba(89, 115, 174, 0.32), transparent 34%),
-                radial-gradient(circle at top right, rgba(219, 166, 71, 0.18), transparent 28%),
-                linear-gradient(180deg, #07101f 0%, #0a1224 100%);
-            color: var(--text);
-            min-height: 100vh;
-        }}
-        .shell {{
-            width: min(1440px, calc(100% - 32px));
-            margin: 0 auto;
-            padding: 28px 0 36px;
-            display: grid;
-            gap: 20px;
-            grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-            align-items: start;
-        }}
-        header {{
-            grid-column: 1 / -1;
-            display: flex;
-            justify-content: space-between;
-            align-items: end;
-            gap: 16px;
-            padding: 8px 4px 0;
-        }}
-        h1 {{ margin: 0; font-size: 34px; line-height: 1; letter-spacing: -0.04em; }}
-        .subtitle {{ color: var(--muted); margin-top: 8px; max-width: 58ch; }}
-        .card, .preview {{
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 24px;
-            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
-            backdrop-filter: blur(18px);
-        }}
-        .card {{ padding: 22px; }}
-        .field {{ display: grid; gap: 8px; margin-bottom: 16px; }}
-        .field label, .group-title {{ font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }}
-        input[type="text"], textarea {{
-            width: 100%;
-            border: 1px solid rgba(150, 171, 213, 0.24);
-            border-radius: 16px;
-            background: rgba(7, 13, 26, 0.68);
-            color: var(--text);
-            padding: 14px 16px;
-            font: inherit;
-            outline: none;
-        }}
-        textarea {{ min-height: 160px; resize: vertical; line-height: 1.5; }}
-        input:focus, textarea:focus {{ border-color: rgba(245, 200, 90, 0.7); box-shadow: 0 0 0 3px rgba(245, 200, 90, 0.14); }}
-                input[type="file"] {{ display: none; }}
-                .dropzone {{
-                        border: 1px dashed rgba(150, 171, 213, 0.38);
-                        border-radius: 18px;
-                        background: rgba(7, 13, 26, 0.5);
-                        padding: 16px;
-                        display: grid;
-                        gap: 8px;
-                        cursor: pointer;
-                        transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-                }}
-                .dropzone:hover, .dropzone.is-dragover {{
-                        border-color: rgba(245, 200, 90, 0.8);
-                        background: rgba(17, 24, 44, 0.74);
-                        transform: translateY(-1px);
-                }}
-                .dropzone-title {{ font-weight: 700; color: var(--text); }}
-                .dropzone-status {{ font-size: 14px; color: var(--muted); line-height: 1.4; }}
-        .phases {{ display: grid; gap: 10px; }}
-        .phase-row {{ display: flex; flex-wrap: wrap; gap: 10px; }}
-        .phase-chip {{
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 11px 14px;
-            border-radius: 999px;
-            border: 1px solid rgba(150, 171, 213, 0.24);
-            background: rgba(7, 13, 26, 0.48);
-            cursor: pointer;
-            user-select: none;
-        }}
-        .phase-chip input {{ accent-color: var(--accent); }}
-        .actions {{ display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }}
-        .button {{
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            border-radius: 14px;
-            padding: 12px 16px;
-            border: 1px solid transparent;
-            font-weight: 700;
-        }}
-        .button.primary {{ background: linear-gradient(135deg, #f6cf68, #e8a94a); color: #0d1220; }}
-        .button.secondary {{ background: rgba(7, 13, 26, 0.55); color: var(--text); border-color: rgba(150, 171, 213, 0.24); }}
-        .preview {{ padding: 18px; }}
-        .preview img {{ width: 100%; height: auto; display: block; border-radius: 18px; border: 1px solid rgba(150, 171, 213, 0.2); background: #091122; }}
-        .preview-head {{ display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 14px; }}
-        .preview-head h2 {{ margin: 0; font-size: 18px; }}
-        .hint {{ color: var(--muted); font-size: 14px; }}
-        @media (max-width: 1080px) {{
-            .shell {{ grid-template-columns: 1fr; }}
-            header {{ flex-direction: column; align-items: start; }}
-        }}
-    </style>
-</head>
-<body>
-    <main class="shell">
-        <header>
-            <div>
-                <h1>{encoded(PAGE_TITLE)}</h1>
-                <div class="subtitle">Простой FastAPI-интерфейс для первой карты: редактируешь поля слева, получаешь PNG справа.</div>
-            </div>
-            <div class="hint">Левый верхний угол отведён под DDS-иконку-заглушку, фазы показаны стрелками, текст занимает нижнюю часть карты.</div>
-        </header>
-
-                <section class="card">
-                        <form id="card-form" method="get" action="/">
-                <div class="field">
-                    <label for="title">Название карты</label>
-                    <input id="title" name="title" type="text" value="{encoded(title)}" />
-                </div>
-                <div class="field">
-                    <label for="creature">Название существа</label>
-                    <input id="creature" name="creature" type="text" value="{encoded(creature)}" />
-                </div>
-                <div class="field">
-                    <label for="icon">Подпись иконки</label>
-                    <input id="icon" name="icon" type="text" value="{encoded(icon_label)}" />
-                </div>
-                                <div class="field">
-                                        <label for="icon-file">DDS иконка</label>
-                                        <input id="icon-file" type="file" accept=".dds,image/vnd.ms-dds" />
-                                        <input id="icon-data" name="icon_data" type="hidden" value="{encoded(icon_data)}" />
-                                        <div id="icon-dropzone" class="dropzone" tabindex="0" role="button" aria-label="Загрузить DDS иконку">
-                                                <div class="dropzone-title">Перетащи DDS файл сюда или нажми, чтобы выбрать</div>
-                                                <div id="icon-status" class="dropzone-status">Иконка не загружена, используется заглушка.</div>
-                                        </div>
-                                </div>
-                <div class="field">
-                    <label for="description">Описание</label>
-                    <textarea id="description" name="description">{description_value}</textarea>
-                </div>
-                <div class="field phases">
-                    <div class="group-title">Фазы</div>
-                    <div class="phase-row">
-                                                <label class="phase-chip"><input type="checkbox" name="phase1" {checked(0)} /> {PHASE_LABELS[0]}</label>
-                                                <label class="phase-chip"><input type="checkbox" name="phase2" {checked(1)} /> {PHASE_LABELS[1]}</label>
-                                                <label class="phase-chip"><input type="checkbox" name="phase3" {checked(2)} /> {PHASE_LABELS[2]}</label>
-                                                <label class="phase-chip"><input type="checkbox" name="phase4" {checked(3)} /> {PHASE_LABELS[3]}</label>
-                    </div>
-                </div>
-                <div class="actions">
-                    <button class="button primary" type="submit">Обновить превью</button>
-                    <a class="button secondary" href="{image_url}" download="{encoded(download_filename)}">Скачать PNG</a>
-                </div>
-            </form>
-        </section>
-
-        <section class="preview">
-            <div class="preview-head">
-                <h2>Превью карты</h2>
-                <div class="hint">/cards/ability.png</div>
-            </div>
-                        <img id="card-preview" src="{image_url}" alt="Ability card preview" />
-        </section>
-    </main>
-        <script>
-                (() => {{
-                        const form = document.getElementById('card-form');
-                        const preview = document.getElementById('card-preview');
-                        const downloadLink = document.querySelector('.button.secondary');
-                        const iconFileInput = document.getElementById('icon-file');
-                        const iconDataInput = document.getElementById('icon-data');
-                        const iconDropzone = document.getElementById('icon-dropzone');
-                        const iconStatus = document.getElementById('icon-status');
-                        let timeoutId = null;
-
-                        const sanitizeFilename = (value) => {{
-                                return `${{(value || 'card').replace(/[^A-Za-z0-9А-Яа-яЁё._-]+/g, '_').replace(/^[._-]+|[._-]+$/g, '') || 'card'}}.png`;
-                        }};
-
-                        const refreshPreview = () => {{
-                                const formData = new FormData(form);
-                                const params = new URLSearchParams();
-
-                                params.set('title', formData.get('title')?.toString() ?? '');
-                                params.set('creature', formData.get('creature')?.toString() ?? '');
-                                params.set('description', formData.get('description')?.toString() ?? '');
-                                params.set('icon', formData.get('icon')?.toString() ?? '');
-                                params.set('icon_data', iconDataInput.value || '');
-
-                                for (const phase of ['phase1', 'phase2', 'phase3', 'phase4']) {{
-                                        params.set(phase, form.querySelector(`[name="${{phase}}"]`)?.checked ? '1' : '0');
-                                }}
-
-                                const url = `/cards/ability.png?${{params.toString()}}`;
-                                const titleValue = (formData.get('title')?.toString() ?? '').trim();
-                                const filename = sanitizeFilename(titleValue);
-                                preview.src = url;
-                                downloadLink.href = url;
-                                downloadLink.setAttribute('download', filename);
-                        }};
-
-                        const scheduleRefresh = () => {{
-                                window.clearTimeout(timeoutId);
-                                timeoutId = window.setTimeout(refreshPreview, 120);
-                        }};
-
-                        const updateIconStatus = (message) => {{
-                                iconStatus.textContent = message;
-                        }};
-
-                        const loadIconFile = (file) => {{
-                                if (!file) {{
-                                        iconDataInput.value = '';
-                                        updateIconStatus('Иконка не загружена, используется заглушка.');
-                                        scheduleRefresh();
-                                        return;
-                                }}
-
-                                const reader = new FileReader();
-                                reader.onload = () => {{
-                                        iconDataInput.value = String(reader.result || '');
-                                        updateIconStatus(`Загружен файл: ${{file.name}}`);
-                                        scheduleRefresh();
-                                }};
-                                reader.onerror = () => {{
-                                        iconDataInput.value = '';
-                                        updateIconStatus('Не удалось прочитать DDS файл.');
-                                }};
-                                reader.readAsDataURL(file);
-                        }};
-
-                        form.addEventListener('input', scheduleRefresh);
-                        form.addEventListener('change', scheduleRefresh);
-                        iconDropzone.addEventListener('click', () => iconFileInput.click());
-                        iconDropzone.addEventListener('keydown', (event) => {{
-                                if (event.key === 'Enter' || event.key === ' ') {{
-                                        event.preventDefault();
-                                        iconFileInput.click();
-                                }}
-                        }});
-                        iconFileInput.addEventListener('change', () => {{
-                                loadIconFile(iconFileInput.files?.[0] ?? null);
-                        }});
-                        iconDropzone.addEventListener('dragover', (event) => {{
-                                event.preventDefault();
-                                iconDropzone.classList.add('is-dragover');
-                        }});
-                        iconDropzone.addEventListener('dragleave', () => {{
-                                iconDropzone.classList.remove('is-dragover');
-                        }});
-                        iconDropzone.addEventListener('drop', (event) => {{
-                                event.preventDefault();
-                                iconDropzone.classList.remove('is-dragover');
-                                const file = event.dataTransfer?.files?.[0] ?? null;
-                                loadIconFile(file);
-                        }});
-                }})();
-        </script>
-</body>
-</html>"""
-
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
-    return HTMLResponse(_card_preview_html(request))
+    with open(os.path.join(static_dir, "index.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(f.read())
 
 
 @app.get("/cards/ability.png")
