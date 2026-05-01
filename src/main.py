@@ -206,7 +206,9 @@ def _render_ability_card_html(
         else f"<div class='card-icon-placeholder'>{encoded(icon_label[:3] or 'DDS')}</div>"
     )
 
-    safe_description = encoded(description.strip() or "Здесь будет описание способности.")
+    safe_description = encoded(
+        description.strip() or "Здесь будет описание способности."
+    )
     safe_description = safe_description.replace("\n", "<br />")
 
     return f"""<!DOCTYPE html>
@@ -320,6 +322,298 @@ def _render_ability_card_html(
 </html>"""
 
 
+def _render_study_card_html(
+    title: str,
+    description: str,
+    icon_label: str,
+    icon_data: str = "",
+) -> str:
+    def encoded(value: str) -> str:
+        return html.escape(value, quote=True)
+
+    icon_uri = _icon_data_uri(icon_data)
+    icon_html = (
+        f"<img class='card-icon-image' src='{encoded(icon_uri)}' alt='Icon' />"
+        if icon_uri
+        else f"<div class='card-icon-placeholder'>{encoded(icon_label[:3] or 'DDS')}</div>"
+    )
+
+    safe_description = encoded(
+        description.strip() or "Здесь будет описание карты изучения."
+    )
+    safe_description = safe_description.replace("\n", "<br />")
+
+    return f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <style>
+        * {{ box-sizing: border-box; }}
+        html, body {{ margin: 0; padding: 0; width: 100%; height: 100%; }}
+        body {{
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(circle at top left, rgba(89, 115, 174, 0.25), transparent 34%),
+                radial-gradient(circle at top right, rgba(219, 166, 71, 0.18), transparent 28%),
+                linear-gradient(180deg, #07101f 0%, #0a1224 100%);
+            color: #eef3ff;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }}
+        .card {{
+            width: 900px;
+            height: 1400px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 44px;
+            background:
+                linear-gradient(180deg, rgba(18, 28, 56, 0.32), rgba(16, 24, 45, 0.1)),
+                linear-gradient(180deg, #11182d 0%, #1e2a4a 100%);
+            box-shadow: 0 36px 120px rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(167, 186, 224, 0.34);
+            padding: 48px;
+        }}
+        .card::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 0%, rgba(252, 230, 145, 0.16), transparent 26%),
+                radial-gradient(circle at 80% 8%, rgba(123, 152, 220, 0.2), transparent 24%);
+            pointer-events: none;
+        }}
+        .panel-shadow {{
+            position: absolute;
+            inset: 48px;
+            border-radius: 44px;
+            box-shadow: inset 0 0 0 1px rgba(167, 186, 224, 0.18), 0 14px 0 rgba(0, 0, 0, 0.12);
+            pointer-events: none;
+        }}
+        .card-content {{ position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }}
+        .card-icon-wrap {{ display: flex; justify-content: center; margin-top: 28px; }}
+        .card-icon {{
+            width: 250px;
+            height: 250px;
+            border-radius: 28px;
+            background: rgba(34, 46, 72, 0.98);
+            border: 5px solid rgba(116, 136, 180, 1);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }}
+        .card-icon-image {{ width: 100%; height: 100%; object-fit: contain; padding: 14px; }}
+        .card-icon-placeholder {{
+            font-size: 42px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #eff5ff;
+        }}
+        .title {{ margin-top: 42px; text-align: center; font-size: 54px; line-height: 1.05; font-weight: 700; color: #f5f8ff; }}
+        .body {{
+            margin-top: 42px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-radius: 32px;
+            background: rgba(30, 42, 74, 0.98);
+            padding: 30px 34px 34px;
+            min-height: 0;
+        }}
+        .body h2 {{ margin: 0 0 18px; font-size: 26px; color: #c6d6f2; }}
+        .body p {{ margin: 0; font-size: 32px; line-height: 1.45; color: #f2f5fc; white-space: normal; word-break: break-word; flex: 1; }}
+    </style>
+</head>
+<body>
+    <section class="card" id="card">
+        <div class="panel-shadow"></div>
+        <div class="card-content">
+            <div class="card-icon-wrap"><div class="card-icon">{icon_html}</div></div>
+            <div class="title">{encoded(title)}</div>
+            <div class="body">
+                <h2>Описание</h2>
+                <p>{safe_description}</p>
+            </div>
+        </div>
+    </section>
+</body>
+</html>"""
+
+
+def _render_air_unit_card_html(
+    title: str,
+    creature: str,
+    description: str,
+    icon_label: str,
+    phases: list[bool],
+    rp_value: int = 5,
+    icon_data: str = "",
+) -> str:
+    def encoded(value: str) -> str:
+        return html.escape(value, quote=True)
+
+    icon_uri = _icon_data_uri(icon_data)
+    phase_items = []
+    for index, active in enumerate(phases):
+        phase_items.append(
+            f"<div class='phase-cell'>{_svg_phase_icon(index, active)}</div>"
+        )
+
+    phase_html = "".join(phase_items)
+    icon_html = (
+        f"<img class='card-icon-image' src='{encoded(icon_uri)}' alt='Icon' />"
+        if icon_uri
+        else f"<div class='card-icon-placeholder'>{encoded(icon_label[:3] or 'DDS')}</div>"
+    )
+
+    safe_description = encoded(
+        description.strip() or "Здесь будет описание карты воздушного юнита."
+    )
+    safe_description = safe_description.replace("\n", "<br />")
+
+    return f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <style>
+        * {{ box-sizing: border-box; }}
+        html, body {{ margin: 0; padding: 0; width: 100%; height: 100%; }}
+        body {{
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(circle at top left, rgba(89, 115, 174, 0.25), transparent 34%),
+                radial-gradient(circle at top right, rgba(219, 166, 71, 0.18), transparent 28%),
+                linear-gradient(180deg, #07101f 0%, #0a1224 100%);
+            color: #eef3ff;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }}
+        .card {{
+            width: 900px;
+            height: 1400px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 44px;
+            background:
+                linear-gradient(180deg, rgba(18, 28, 56, 0.32), rgba(16, 24, 45, 0.1)),
+                linear-gradient(180deg, #11182d 0%, #1e2a4a 100%);
+            box-shadow: 0 36px 120px rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(167, 186, 224, 0.34);
+            padding: 48px;
+        }}
+        .card::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 0%, rgba(252, 230, 145, 0.16), transparent 26%),
+                radial-gradient(circle at 80% 8%, rgba(123, 152, 220, 0.2), transparent 24%);
+            pointer-events: none;
+        }}
+        .panel-shadow {{
+            position: absolute;
+            inset: 48px;
+            border-radius: 44px;
+            box-shadow: inset 0 0 0 1px rgba(167, 186, 224, 0.18), 0 14px 0 rgba(0, 0, 0, 0.12);
+            pointer-events: none;
+        }}
+        .card-content {{ position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }}
+        .card-icon-wrap {{ display: flex; justify-content: center; margin-top: 28px; }}
+        .card-icon {{
+            width: 250px;
+            height: 250px;
+            border-radius: 28px;
+            background: rgba(34, 46, 72, 0.98);
+            border: 5px solid rgba(116, 136, 180, 1);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }}
+        .card-icon-image {{ width: 100%; height: 100%; object-fit: contain; padding: 14px; }}
+        .card-icon-placeholder {{
+            font-size: 42px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #eff5ff;
+        }}
+        .title {{ margin-top: 42px; text-align: center; font-size: 54px; line-height: 1.05; font-weight: 700; color: #f5f8ff; }}
+        .phases {{ margin-top: 42px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: start; }}
+        .phase-cell {{ display: flex; justify-content: center; align-items: flex-start; min-height: 96px; }}
+        .phase-icon {{ display: inline-flex; width: 96px; height: 96px; }}
+        .phase-icon svg {{ width: 100%; height: 100%; display: block; }}
+        .phase-icon-move svg path {{ fill: none; stroke: currentColor; }}
+        .phase-icon-attack svg path {{ fill: currentColor; stroke: none; }}
+        .phase-icon-attack svg path[fill="none"] {{ fill: none; }}
+        .phase-icon-hammer svg path {{ fill: currentColor; stroke: none; }}
+        .phase-icon-book svg path {{ stroke: none; }}
+        .phase-icon-book svg path:first-of-type {{ fill: none; }}
+        .phase-icon-book svg path:last-of-type {{ fill: currentColor; }}
+        .body {{
+            margin-top: 28px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-radius: 32px;
+            background: rgba(30, 42, 74, 0.98);
+            padding: 30px 34px 34px;
+            min-height: 0;
+        }}
+        .body h2 {{ margin: 0 0 18px; font-size: 26px; color: #c6d6f2; }}
+        .body p {{ margin: 0; font-size: 32px; line-height: 1.45; color: #f2f5fc; white-space: normal; word-break: break-word; flex: 1; }}
+        .rp-value {{
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(167, 186, 224, 0.24);
+            text-align: center;
+            font-size: 48px;
+            font-weight: 700;
+            color: #f5c85a;
+            letter-spacing: 0.1em;
+        }}
+    </style>
+</head>
+<body>
+    <section class="card" id="card">
+        <div class="panel-shadow"></div>
+        <div class="card-content">
+            <div class="card-icon-wrap"><div class="card-icon">{icon_html}</div></div>
+            <div class="title">{encoded(title)}</div>
+            <div class="phases">{phase_html}</div>
+            <div class="body">
+                <h2>Описание</h2>
+                <p>{safe_description}</p>
+                <div class="rp-value">РП: {rp_value}</div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>"""
+
+
+def generate_study_card_png(
+    title: str,
+    description: str,
+    icon_label: str,
+    icon_data: str = "",
+) -> bytes:
+    html_content = _render_study_card_html(title, description, icon_label, icon_data)
+    return _render_html_to_png(html_content)
+
+
+def generate_air_unit_card_png(
+    title: str,
+    creature: str,
+    description: str,
+    icon_label: str,
+    phases: list[bool],
+    rp_value: int = 5,
+    icon_data: str = "",
+) -> bytes:
+    html_content = _render_air_unit_card_html(
+        title, creature, description, icon_label, phases, rp_value, icon_data
+    )
+    return _render_html_to_png(html_content)
+
+
 def _render_html_to_png(html_content: str) -> bytes:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True, args=["--no-sandbox"])
@@ -407,10 +701,63 @@ from fastapi.staticfiles import StaticFiles
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
     with open(os.path.join(static_dir, "index.html"), "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
+
+
+@app.get("/cards/card.png")
+def card_png(request: Request) -> Response:
+    card_type = _query_value(request, "card_type", "ability")
+    title = _query_value(request, "title", "Карта")
+    description = _query_value(request, "description", "")
+    icon_label = _query_value(request, "icon", "DDS")
+    icon_data = _query_value(request, "icon_data", "")
+
+    if card_type == "study":
+        return Response(
+            generate_study_card_png(title, description, icon_label, icon_data),
+            media_type="image/png",
+            headers={"Content-Disposition": _download_header_value(title)},
+        )
+    elif card_type == "air-unit":
+        creature = _query_value(request, "creature", "Юнит")
+        phases = _phase_flags(request)
+        try:
+            rp_value = int(_query_value(request, "rp_value", "5"))
+        except ValueError:
+            rp_value = 5
+        return Response(
+            generate_air_unit_card_png(
+                title, creature, description, icon_label, phases, rp_value, icon_data
+            ),
+            media_type="image/png",
+            headers={"Content-Disposition": _download_header_value(title)},
+        )
+    elif card_type == "building" or card_type == "unit":
+        # Placeholder: return ability card for now
+        creature = _query_value(request, "creature", "Юнит")
+        phases = _phase_flags(request)
+        return Response(
+            generate_ability_card_png(
+                title, creature, description, icon_label, phases, icon_data
+            ),
+            media_type="image/png",
+            headers={"Content-Disposition": _download_header_value(title)},
+        )
+    else:
+        # Default to ability card
+        creature = _query_value(request, "creature", "Существо")
+        phases = _phase_flags(request)
+        return Response(
+            generate_ability_card_png(
+                title, creature, description, icon_label, phases, icon_data
+            ),
+            media_type="image/png",
+            headers={"Content-Disposition": _download_header_value(title)},
+        )
 
 
 @app.get("/cards/ability.png")
