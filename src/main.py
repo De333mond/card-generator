@@ -637,10 +637,10 @@ def _render_building_card_html(
 
     safe_description = encoded(description.strip() or "Описание здания")
     safe_description = safe_description.replace("\n", "<br />")
-    
+
     safe_unlocks = encoded(unlocks.strip() or "")
     safe_unlocks = safe_unlocks.replace("\n", "<br />")
-    
+
     safe_requirements = encoded(requirements.strip() or "")
     safe_requirements = safe_requirements.replace("\n", "<br />")
 
@@ -877,7 +877,15 @@ def generate_building_card_png(
     icon_data: str = "",
 ) -> bytes:
     html_content = _render_building_card_html(
-        title, crystal, cloud, clock, description, unlocks, requirements, icon_label, icon_data
+        title,
+        crystal,
+        cloud,
+        clock,
+        description,
+        unlocks,
+        requirements,
+        icon_label,
+        icon_data,
     )
     return _render_html_to_png(html_content)
 
@@ -1021,7 +1029,15 @@ def card_png(request: Request) -> Response:
         requirements = _query_value(request, "requirements", "")
         return Response(
             generate_building_card_png(
-                title, crystal, cloud, clock, description, unlocks, requirements, icon_label, icon_data
+                title,
+                crystal,
+                cloud,
+                clock,
+                description,
+                unlocks,
+                requirements,
+                icon_label,
+                icon_data,
             ),
             media_type="image/png",
             headers={"Content-Disposition": _download_header_value(title)},
