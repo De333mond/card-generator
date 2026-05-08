@@ -161,6 +161,26 @@ def _svg_markup(file_name: str) -> str:
     return svg_text.strip()
 
 
+def _yellow_svg_markup(file_name: str) -> str:
+    svg_text = _svg_markup(file_name)
+    svg_text = re.sub(r'fill="(?!none)[^"]*"', 'fill="currentColor"', svg_text)
+    svg_text = re.sub(r"fill='(?!none)[^']*'", "fill='currentColor'", svg_text)
+    svg_text = re.sub(r'stroke="(?!none)[^"]*"', 'stroke="currentColor"', svg_text)
+    svg_text = re.sub(r"stroke='(?!none)[^']*'", "stroke='currentColor'", svg_text)
+    svg_text = re.sub(r'<path((?![^>]*fill=)[^>]*)>', r'<path fill="currentColor"\1>', svg_text)
+    return svg_text
+
+
+def _load_icon_svg(icon_name: str) -> str:
+    """Load SVG icon from icons directory"""
+    icon_file = PHASE_ICON_DIR / f"{icon_name}.svg"
+    if not icon_file.exists():
+        return ""
+    svg_text = icon_file.read_text(encoding="utf-8")
+    svg_text = re.sub(r"<\?xml.*?\?>", "", svg_text, count=1, flags=re.DOTALL)
+    return svg_text.strip()
+
+
 def _svg_phase_icon(index: int, active: bool) -> str:
     color = "#fadc61" if active else "#0b0f18"
     kind = PHASE_ICON_KINDS[index]
@@ -614,6 +634,327 @@ def generate_air_unit_card_png(
     return _render_html_to_png(html_content)
 
 
+def _render_unit_card_html(
+    title: str,
+    creature: str,
+    health: int = 5,
+    shields: int = 10,
+    forward: int = 3,
+    shield_stat: int = 2,
+    sword: int = 4,
+    crystal: int = 1,
+    cloud: int = 2,
+    description: str = "",
+    properties: str = "",
+    icon_label: str = "",
+    icon_data: str = "",
+) -> str:
+    def encoded(value: str) -> str:
+        return html.escape(value, quote=True)
+
+    icon_uri = _icon_data_uri(icon_data)
+    icon_html = (
+        f"<img class='card-icon-image' src='{encoded(icon_uri)}' alt='Icon' />"
+        if icon_uri
+        else f"<div class='card-icon-placeholder'>{encoded(icon_label[:3] or 'DDS')}</div>"
+    )
+
+    # Generate health boxes
+    health_boxes = "".join(
+        f"<div class='health-box'>{i}</div>" for i in range(1, health + 1)
+    )
+
+    # Generate shield boxes
+    shield_boxes = "".join(
+        f"<div class='shield-box'>{i}</div>" for i in range(1, shields + 1)
+    )
+
+    health_shields_html = f"<div class='health-shields'>{health_boxes}{shield_boxes}</div>"
+
+    safe_description = encoded(description.strip() or "Описание юнита")
+    safe_description = safe_description.replace("\n", "<br />")
+
+    safe_properties = encoded(properties.strip() or "Свойства")
+    safe_properties = safe_properties.replace("\n", "<br />")
+
+    display_title = title.strip() or creature.strip() or "Юнит"
+    forward_svg = _yellow_svg_markup("forward.svg")
+    shield_svg = _yellow_svg_markup("shield.svg")
+    sword_svg = _yellow_svg_markup("sword-fill-svgrepo-com.svg")
+    crystal_svg = _yellow_svg_markup("crystal.svg")
+    cloud_svg = _yellow_svg_markup("cloud.svg")
+
+    return f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <style>
+        * {{ box-sizing: border-box; }}
+        html, body {{ margin: 0; padding: 0; width: 100%; height: 100%; }}
+        body {{
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(circle at top left, rgba(89, 115, 174, 0.25), transparent 34%),
+                radial-gradient(circle at top right, rgba(219, 166, 71, 0.18), transparent 28%),
+                linear-gradient(180deg, #07101f 0%, #0a1224 100%);
+            color: #eef3ff;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }}
+        .card {{
+            width: 900px;
+            height: 1400px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 44px;
+            background:
+                linear-gradient(180deg, rgba(18, 28, 56, 0.32), rgba(16, 24, 45, 0.1)),
+                linear-gradient(180deg, #11182d 0%, #1e2a4a 100%);
+            box-shadow: 0 36px 120px rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(167, 186, 224, 0.34);
+            padding: 48px;
+        }}
+        .card::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 0%, rgba(252, 230, 145, 0.16), transparent 26%),
+                radial-gradient(circle at 80% 8%, rgba(123, 152, 220, 0.2), transparent 24%);
+            pointer-events: none;
+        }}
+        .panel-shadow {{
+            position: absolute;
+            inset: 48px;
+            border-radius: 44px;
+            box-shadow: inset 0 0 0 1px rgba(167, 186, 224, 0.18), 0 14px 0 rgba(0, 0, 0, 0.12);
+            pointer-events: none;
+        }}
+        .card-content {{ position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }}
+        .card-header {{
+            position: relative;
+            min-height: 190px;
+            margin-bottom: 20px;
+        }}
+        .card-icon {{
+            width: 164px;
+            height: 164px;
+            border-radius: 12px;
+            background: rgba(34, 46, 72, 0.98);
+            border: 3px solid rgba(116, 136, 180, 1);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }}
+        .card-icon-image {{ width: 100%; height: 100%; object-fit: contain; padding: 16px; }}
+        .card-icon-placeholder {{
+            font-size: 36px;
+            font-weight: 700;
+            color: #eff5ff;
+        }}
+        .card-title {{
+            position: absolute;
+            left: 188px;
+            right: 20px;
+            top: 0;
+            text-align: center;
+            font-size: 42px;
+            font-weight: 700;
+            color: #f5f8ff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+        .health-shields {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+        }}
+        .health-box,
+        .shield-box {{
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 7px;
+            font-size: 18px;
+            font-weight: 600;
+            border: 2px solid;
+            flex: 0 0 52px;
+        }}
+        .health-box {{
+            background: rgba(255, 50, 50, 0.2);
+            border-color: #ff3232;
+            color: #ff8888;
+        }}
+        .shield-box {{
+            background: rgba(50, 120, 255, 0.2);
+            border-color: #3278ff;
+            color: #88b8ff;
+        }}
+        .stats-grid {{
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin-bottom: 26px;
+        }}
+        .stat {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }}
+        .stat-icon {{
+            width: 78px;
+            height: 78px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }}
+        .stat-icon svg {{
+            width: 100%;
+            height: 100%;
+            filter: brightness(1.2);
+            display: block;
+        }}
+        .stat-value {{
+            font-size: 30px;
+            font-weight: 700;
+            text-align: center;
+            color: #ffd700;
+        }}
+        .text-fields {{
+            display: grid;
+            grid-template-rows: 2.1fr 0.9fr;
+            gap: 14px;
+            flex: 1;
+            min-height: 0;
+        }}
+        .text-field {{
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+            min-height: 0;
+        }}
+        .text-field-title {{
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #aaa;
+        }}
+        .text-field-content {{
+            font-size: 19px;
+            line-height: 1.6;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+            color: #ddd;
+            flex: 1;
+        }}
+        .text-field-content-description {{
+            font-size: 21px;
+            line-height: 1.62;
+        }}
+        .text-field-content-small {{
+            flex: 1;
+            max-height: none;
+        }}
+    </style>
+</head>
+<body>
+    <section class="card" id="card">
+        <div class="panel-shadow"></div>
+        <div class="card-content">
+            <div class="card-header">
+                <div class="card-icon">{icon_html}</div>
+                <div class="card-title">{encoded(display_title)}</div>
+            </div>
+
+            <div class="health-shields">
+                {health_shields_html}
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-icon" style="color: #f5c85a;">{forward_svg}</div>
+                    <div class="stat-value">{forward}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-icon" style="color: #f5c85a;">{shield_svg}</div>
+                    <div class="stat-value">{shield_stat}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-icon" style="color: #f5c85a;">{sword_svg}</div>
+                    <div class="stat-value">{sword}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-icon" style="color: #f5c85a;">{crystal_svg}</div>
+                    <div class="stat-value">{crystal}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-icon" style="color: #f5c85a;">{cloud_svg}</div>
+                    <div class="stat-value">{cloud}</div>
+                </div>
+            </div>
+
+            <div class="text-fields">
+                <div class="text-field">
+                    <div class="text-field-title">Описание</div>
+                    <div class="text-field-content text-field-content-description">{safe_description}</div>
+                </div>
+                <div class="text-field">
+                    <div class="text-field-title">Свойства</div>
+                    <div class="text-field-content text-field-content-small">{safe_properties}</div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>"""
+
+
+def generate_unit_card_png(
+    title: str,
+    creature: str,
+    health: int = 5,
+    shields: int = 10,
+    forward: int = 3,
+    shield_stat: int = 2,
+    sword: int = 4,
+    crystal: int = 1,
+    cloud: int = 2,
+    description: str = "",
+    properties: str = "",
+    icon_label: str = "",
+    icon_data: str = "",
+) -> bytes:
+    html_content = _render_unit_card_html(
+        title,
+        creature,
+        health,
+        shields,
+        forward,
+        shield_stat,
+        sword,
+        crystal,
+        cloud,
+        description,
+        properties,
+        icon_label,
+        icon_data,
+    )
+    return _render_html_to_png(html_content)
+
+
+
 def _render_building_card_html(
     title: str,
     crystal: int = 0,
@@ -977,10 +1318,19 @@ from fastapi.staticfiles import StaticFiles
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+icons_dir = os.path.join(os.path.dirname(__file__), "public", "icons")
+app.mount("/icons", StaticFiles(directory=icons_dir), name="icons")
+
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
     with open(os.path.join(static_dir, "index.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(f.read())
+
+
+@app.get("/unit-card", response_class=HTMLResponse)
+def unit_card(request: Request) -> HTMLResponse:
+    with open(os.path.join(static_dir, "unit-card.html"), "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
 
@@ -1043,12 +1393,30 @@ def card_png(request: Request) -> Response:
             headers={"Content-Disposition": _download_header_value(title)},
         )
     elif card_type == "unit":
-        # Placeholder: return ability card for now
         creature = _query_value(request, "creature", "Юнит")
-        phases = _phase_flags(request)
+        health = int(_query_value(request, "health", "5"))
+        shields = int(_query_value(request, "shields", "10"))
+        forward = int(_query_value(request, "forward", "0"))
+        shield = int(_query_value(request, "shield", "0"))
+        sword = int(_query_value(request, "sword", "0"))
+        crystal = int(_query_value(request, "crystal", "0"))
+        cloud = int(_query_value(request, "cloud", "0"))
+        properties = _query_value(request, "properties", "")
         return Response(
-            generate_ability_card_png(
-                title, creature, description, icon_label, phases, icon_data
+            generate_unit_card_png(
+                title,
+                creature,
+                health,
+                shields,
+                forward,
+                shield,
+                sword,
+                crystal,
+                cloud,
+                description,
+                properties,
+                icon_label,
+                icon_data,
             ),
             media_type="image/png",
             headers={"Content-Disposition": _download_header_value(title)},

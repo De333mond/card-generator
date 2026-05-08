@@ -15,6 +15,16 @@
   const clockField = document.getElementById('clock-field');
   const unlocksField = document.getElementById('unlocks-field');
   const requirementsField = document.getElementById('requirements-field');
+  const unitFieldset = document.getElementById('unit-fieldset');
+  const unitHealthInput = document.getElementById('unit-health');
+  const unitShieldsInput = document.getElementById('unit-shields');
+  const unitForwardInput = document.getElementById('unit-forward');
+  const unitShieldInput = document.getElementById('unit-shield');
+  const unitSwordInput = document.getElementById('unit-sword');
+  const unitCrystalInput = document.getElementById('unit-crystal');
+  const unitCloudInput = document.getElementById('unit-cloud');
+  const unitDescriptionInput = document.getElementById('unit-description');
+  const unitPropertiesInput = document.getElementById('unit-properties');
   let timeoutId = null;
   let currentCardType = 'ability';
 
@@ -24,7 +34,7 @@
 
   const updateFieldVisibility = (cardType) => {
     currentCardType = cardType;
-    
+
     // Hide/show fields based on card type
     creatureField.style.display = cardType === 'ability' || cardType === 'air-unit' ? '' : 'none';
     phasesField.style.display = cardType === 'ability' ? '' : 'none';
@@ -34,6 +44,7 @@
     clockField.style.display = cardType === 'building' ? '' : 'none';
     unlocksField.style.display = cardType === 'building' ? '' : 'none';
     requirementsField.style.display = cardType === 'building' ? '' : 'none';
+    unitFieldset.style.display = cardType === 'unit' ? '' : 'none';
   };
 
   const refreshPreview = () => {
@@ -70,6 +81,18 @@
       params.set('clock', formData.get('clock')?.toString() ?? '0');
       params.set('unlocks', formData.get('unlocks')?.toString() ?? '');
       params.set('requirements', formData.get('requirements')?.toString() ?? '');
+    }
+
+    if (currentCardType === 'unit') {
+      params.set('health', unitHealthInput.value || '5');
+      params.set('shields', unitShieldsInput.value || '10');
+      params.set('forward', unitForwardInput.value || '0');
+      params.set('shield', unitShieldInput.value || '0');
+      params.set('sword', unitSwordInput.value || '0');
+      params.set('crystal', unitCrystalInput.value || '0');
+      params.set('cloud', unitCloudInput.value || '0');
+      params.set('description', unitDescriptionInput.value || '');
+      params.set('properties', unitPropertiesInput.value || '');
     }
 
     const url = `/cards/card.png?${params.toString()}`;
@@ -142,14 +165,14 @@
   typeButtons.forEach(button => {
     button.addEventListener('click', () => {
       const cardType = button.getAttribute('data-type');
-      
+
       // Update active button
       typeButtons.forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
-      
+
       // Update field visibility
       updateFieldVisibility(cardType);
-      
+
       // Refresh preview
       scheduleRefresh();
     });

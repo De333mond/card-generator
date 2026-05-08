@@ -72,6 +72,45 @@
           <label for="requirements">Требования</label>
           <textarea id="requirements" name="requirements"></textarea>
         </div>
+        <div class="field" id="unit-fieldset" style="display: none;">
+          <div class="group-title">Карта юнита</div>
+          <div class="field">
+            <label for="unit-health">Здоровье</label>
+            <input id="unit-health" name="unit_health" type="number" value="5" min="0" />
+          </div>
+          <div class="field">
+            <label for="unit-shields">Щиты</label>
+            <input id="unit-shields" name="unit_shields" type="number" value="10" min="0" />
+          </div>
+          <div class="field">
+            <label for="unit-forward">Вперёд</label>
+            <input id="unit-forward" name="unit_forward" type="number" value="0" min="0" />
+          </div>
+          <div class="field">
+            <label for="unit-shield">Защита</label>
+            <input id="unit-shield" name="unit_shield" type="number" value="0" min="0" />
+          </div>
+          <div class="field">
+            <label for="unit-sword">Меч</label>
+            <input id="unit-sword" name="unit_sword" type="number" value="0" min="0" />
+          </div>
+          <div class="field">
+            <label for="unit-crystal">Кристалл</label>
+            <input id="unit-crystal" name="unit_crystal" type="number" value="0" min="0" />
+          </div>
+          <div class="field">
+            <label for="unit-cloud">Облако</label>
+            <input id="unit-cloud" name="unit_cloud" type="number" value="0" min="0" />
+          </div>
+          <div class="field">
+            <label for="unit-description">Описание</label>
+            <textarea id="unit-description" name="unit_description">Описание юнита</textarea>
+          </div>
+          <div class="field">
+            <label for="unit-properties">Свойства</label>
+            <textarea id="unit-properties" name="unit_properties">Свойства юнита</textarea>
+          </div>
+        </div>
         <div class="actions">
           <button class="button primary" type="submit" onclick="event.preventDefault(); return false;">Обновить
             превью</button>

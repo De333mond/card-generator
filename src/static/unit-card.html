@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unit Card Builder</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      display: flex;
+      gap: 30px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    .sidebar {
+      width: 380px;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      height: fit-content;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .sidebar h2 {
+      font-size: 20px;
+      color: #667eea;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      color: #333;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      padding: 10px 12px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .preview-area {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 20px;
+    }
+
+    .card {
+      width: 400px;
+      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+      color: white;
+      position: relative;
+    }
+
+    .card-header {
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+      align-items: start;
+    }
+
+    .card-icon {
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      overflow: hidden;
+    }
+
+    .card-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 8px;
+    }
+
+    .card-title {
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #fff;
+      margin-top: 10px;
+    }
+
+    .card-section {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .card-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .health-shields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(25px, 1fr));
+      gap: 4px;
+    }
+
+    .health-box,
+    .shield-box {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 2px solid;
+    }
+
+    .health-box {
+      background: rgba(255, 50, 50, 0.2);
+      border-color: #ff3232;
+      color: #ff8888;
+    }
+
+    .shield-box {
+      background: rgba(50, 120, 255, 0.2);
+      border-color: #3278ff;
+      color: #88b8ff;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-icon img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      filter: brightness(1.2);
+    }
+
+    .stat-value {
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      color: #ffd700;
+    }
+
+    .text-fields {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 15px;
+    }
+
+    .text-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .text-field-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #aaa;
+    }
+
+    .text-field-content {
+      font-size: 12px;
+      line-height: 1.4;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      max-height: 120px;
+      overflow-y: auto;
+      color: #ddd;
+    }
+
+    .text-field-content-small {
+      max-height: 60px;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .sidebar {
+        width: 100%;
+        max-height: none;
+      }
+
+      .preview-area {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <h2>Unit Card Builder</h2>
+
+      <div class="form-group">
+        <label for="unitName">Unit Name</label>
+        <input type="text" id="unitName" value="Рыцарь" />
+      </div>
+
+      <div class="form-group">
+        <label for="unitIcon">Unit Icon (emoji or URL)</label>
+        <input type="text" id="unitIcon" value="⚔️" />
+      </div>
+
+      <div class="form-group">
+        <label>Health & Shields</label>
+        <div class="form-row">
+          <div>
+            <label style="font-size: 12px; text-transform: none;">Health (HP)</label>
+            <input type="number" id="healthPoints" value="5" min="0" max="20" />
+          </div>
+          <div>
+            <label style="font-size: 12px; text-transform: none;">Shields</label>
+            <input type="number" id="shieldPoints" value="10" min="0" max="20" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Unit Characteristics</label>
+        <div class="form-row">
+          <div>
+            <label style="font-size: 12px; text-transform: none;">Forward</label>
+            <input type="number" id="statForward" value="3" min="0" />
+          </div>
+          <div>
+            <label style="font-size: 12px; text-transform: none;">Shield</label>
+            <input type="number" id="statShield" value="2" min="0" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label style="font-size: 12px; text-transform: none;">Sword</label>
+            <input type="number" id="statSword" value="4" min="0" />
+          </div>
+          <div>
+            <label style="font-size: 12px; text-transform: none;">Crystal</label>
+            <input type="number" id="statCrystal" value="1" min="0" />
+          </div>
+        </div>
+        <div>
+          <label style="font-size: 12px; text-transform: none;">Cloud</label>
+          <input type="number" id="statCloud" value="2" min="0" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="unitDescription">Description</label>
+        <textarea id="unitDescription">Опытный боец, владеющий мечом и щитом. Способен наносить серьёзные удары противнику и обороняться от атак.</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="unitProperties">Properties</label>
+        <textarea id="unitProperties">• Может двигаться вперёд
+• Боевой дух +1</textarea>
+      </div>
+    </div>
+
+    <div class="preview-area">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">
+            <span id="iconDisplay">⚔️</span>
+          </div>
+          <div class="card-title" id="titleDisplay">Рыцарь</div>
+        </div>
+
+        <div class="card-section">
+          <div class="health-shields" id="healthShieldsContainer">
+            <!-- Generated dynamically -->
+          </div>
+        </div>
+
+        <div class="card-section">
+          <div class="stats-grid">
+            <div class="stat">
+              <div class="stat-icon">
+                <img src="/icons/forward.svg" alt="forward" />
+              </div>
+              <div class="stat-value" id="statForwardDisplay">3</div>
+            </div>
+            <div class="stat">
+              <div class="stat-icon">
+                <img src="/icons/shield.svg" alt="shield" />
+              </div>
+              <div class="stat-value" id="statShieldDisplay">2</div>
+            </div>
+            <div class="stat">
+              <div class="stat-icon">
+                <img src="/icons/sword-fill-svgrepo-com.svg" alt="sword" />
+              </div>
+              <div class="stat-value" id="statSwordDisplay">4</div>
+            </div>
+            <div class="stat">
+              <div class="stat-icon">
+                <img src="/icons/crystal.svg" alt="crystal" />
+              </div>
+              <div class="stat-value" id="statCrystalDisplay">1</div>
+            </div>
+            <div class="stat">
+              <div class="stat-icon">
+                <img src="/icons/cloud.svg" alt="cloud" />
+              </div>
+              <div class="stat-value" id="statCloudDisplay">2</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-section">
+          <div class="text-fields">
+            <div class="text-field">
+              <div class="text-field-title">Description</div>
+              <div class="text-field-content" id="descriptionDisplay">
+                Опытный боец, владеющий мечом и щитом. Способен наносить серьёзные удары противнику и обороняться от атак.
+              </div>
+            </div>
+            <div class="text-field">
+              <div class="text-field-title">Properties</div>
+              <div class="text-field-content text-field-content-small" id="propertiesDisplay">
+                • Может двигаться вперёд
+• Боевой дух +1
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const inputs = {
+      unitName: document.getElementById('unitName'),
+      unitIcon: document.getElementById('unitIcon'),
+      healthPoints: document.getElementById('healthPoints'),
+      shieldPoints: document.getElementById('shieldPoints'),
+      statForward: document.getElementById('statForward'),
+      statShield: document.getElementById('statShield'),
+      statSword: document.getElementById('statSword'),
+      statCrystal: document.getElementById('statCrystal'),
+      statCloud: document.getElementById('statCloud'),
+      unitDescription: document.getElementById('unitDescription'),
+      unitProperties: document.getElementById('unitProperties'),
+    };
+
+    const displays = {
+      title: document.getElementById('titleDisplay'),
+      icon: document.getElementById('iconDisplay'),
+      healthShields: document.getElementById('healthShieldsContainer'),
+      statForward: document.getElementById('statForwardDisplay'),
+      statShield: document.getElementById('statShieldDisplay'),
+      statSword: document.getElementById('statSwordDisplay'),
+      statCrystal: document.getElementById('statCrystalDisplay'),
+      statCloud: document.getElementById('statCloudDisplay'),
+      description: document.getElementById('descriptionDisplay'),
+      properties: document.getElementById('propertiesDisplay'),
+    };
+
+    function renderHealthAndShields() {
+      const hp = parseInt(inputs.healthPoints.value) || 0;
+      const shields = parseInt(inputs.shieldPoints.value) || 0;
+      displays.healthShields.innerHTML = '';
+
+      // Health boxes
+      for (let i = 1; i <= hp; i++) {
+        const box = document.createElement('div');
+        box.className = 'health-box';
+        box.textContent = i;
+        displays.healthShields.appendChild(box);
+      }
+
+      // Shield boxes
+      for (let i = 1; i <= shields; i++) {
+        const box = document.createElement('div');
+        box.className = 'shield-box';
+        box.textContent = i;
+        displays.healthShields.appendChild(box);
+      }
+    }
+
+    function updateCard() {
+      // Update title and icon
+      displays.title.textContent = inputs.unitName.value || 'Unit';
+      displays.icon.textContent = inputs.unitIcon.value || '?';
+
+      // Update stats
+      displays.statForward.textContent = inputs.statForward.value || '0';
+      displays.statShield.textContent = inputs.statShield.value || '0';
+      displays.statSword.textContent = inputs.statSword.value || '0';
+      displays.statCrystal.textContent = inputs.statCrystal.value || '0';
+      displays.statCloud.textContent = inputs.statCloud.value || '0';
+
+      // Update text content
+      displays.description.textContent = inputs.unitDescription.value || 'Description';
+      displays.properties.textContent = inputs.unitProperties.value || 'Properties';
+
+      // Render health and shields
+      renderHealthAndShields();
+    }
+
+    // Attach event listeners
+    Object.values(inputs).forEach(input => {
+      input.addEventListener('input', updateCard);
+    });
+
+    // Initial render
+    updateCard();
+  </script>
+</body>
+
+</html>
