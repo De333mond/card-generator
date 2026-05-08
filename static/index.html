@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tablegame Card Generator</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <h1 class="sidebar-title">Card Builder</h1>
+            
+            <div class="card-type-selector">
+                <label>Card Type:</label>
+                <select id="cardType">
+                    <option value="ability">Ability Card</option>
+                    <option value="study">Study Card</option>
+                    <option value="building">Building Card</option>
+                    <option value="air-unit">Air Unit Card</option>
+                </select>
+            </div>
+
+            <form id="cardForm" class="form-section">
+                <!-- Common fields -->
+                <fieldset class="form-group">
+                    <legend>Basic Info</legend>
+                    <div class="form-field">
+                        <label for="title">Title:</label>
+                        <input type="text" id="title" name="title" value="New Card" />
+                    </div>
+                </fieldset>
+
+                <!-- Ability Card fields -->
+                <fieldset id="abilityFields" class="form-group">
+                    <legend>Ability Card Fields</legend>
+                    <div class="form-field">
+                        <label for="creature">Creature:</label>
+                        <input type="text" id="creature" name="creature" value="Существо" />
+                    </div>
+                    <div class="form-field">
+                        <label for="description">Description:</label>
+                        <textarea id="description" name="description" rows="4">Описание способности</textarea>
+                    </div>
+                    <div class="phases-container">
+                        <label>Phases:</label>
+                        <div class="phases-grid">
+                            <label class="phase-checkbox">
+                                <input type="checkbox" name="phase1" checked /> Movement
+                            </label>
+                            <label class="phase-checkbox">
+                                <input type="checkbox" name="phase2" checked /> Attack
+                            </label>
+                            <label class="phase-checkbox">
+                                <input type="checkbox" name="phase3" checked /> Building
+                            </label>
+                            <label class="phase-checkbox">
+                                <input type="checkbox" name="phase4" checked /> Study
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Study Card fields -->
+                <fieldset id="studyFields" class="form-group" style="display: none;">
+                    <legend>Study Card Fields</legend>
+                    <div class="form-field">
+                        <label for="studyDescription">Description:</label>
+                        <textarea id="studyDescription" name="studyDescription" rows="4">Описание карты изучения</textarea>
+                    </div>
+                </fieldset>
+
+                <!-- Building Card fields -->
+                <fieldset id="buildingFields" class="form-group" style="display: none;">
+                    <legend>Building Card Fields</legend>
+                    <div class="form-field">
+                        <label for="crystal">Crystal Value:</label>
+                        <input type="number" id="crystal" name="crystal" value="0" />
+                    </div>
+                    <div class="form-field">
+                        <label for="cloud">Cloud Value:</label>
+                        <input type="number" id="cloud" name="cloud" value="0" />
+                    </div>
+                    <div class="form-field">
+                        <label for="clock">Clock Value:</label>
+                        <input type="number" id="clock" name="clock" value="0" />
+                    </div>
+                    <div class="form-field">
+                        <label for="buildingDescription">Description:</label>
+                        <textarea id="buildingDescription" name="buildingDescription" rows="4">Описание здания</textarea>
+                    </div>
+                    <div class="form-field">
+                        <label for="unlocks">Unlocks:</label>
+                        <textarea id="unlocks" name="unlocks" rows="3"></textarea>
+                    </div>
+                    <div class="form-field">
+                        <label for="requirements">Requirements:</label>
+                        <textarea id="requirements" name="requirements" rows="3"></textarea>
+                    </div>
+                </fieldset>
+
+                <!-- Air Unit Card fields -->
+                <fieldset id="airUnitFields" class="form-group" style="display: none;">
+                    <legend>Air Unit Card Fields</legend>
+                    <div class="form-field">
+                        <label for="airCreature">Creature:</label>
+                        <input type="text" id="airCreature" name="airCreature" value="Юнит" />
+                    </div>
+                    <div class="form-field">
+                        <label for="airDescription">Description:</label>
+                        <textarea id="airDescription" name="airDescription" rows="4">Описание воздушного юнита</textarea>
+                    </div>
+                    <div class="form-field">
+                        <label for="rpValue">RP Value:</label>
+                        <input type="number" id="rpValue" name="rpValue" value="5" />
+                    </div>
+                    <div class="phases-container">
+                        <label>Phases:</label>
+                        <div class="phases-grid">
+                            <label class="phase-checkbox">
+                                <input type="checkbox" name="airPhase1" checked /> Movement
+                            </label>
+                            <label class="phase-checkbox">
+                                <input type="checkbox" name="airPhase2" checked /> Attack
+                            </label>
+                            <label class="phase-checkbox">
+                                <input type="checkbox" name="airPhase3" checked /> Building
+                            </label>
+                            <label class="phase-checkbox">
+                                <input type="checkbox" name="airPhase4" checked /> Study
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Common icon fields -->
+                <fieldset class="form-group">
+                    <legend>Icon</legend>
+                    <div class="form-field">
+                        <label for="icon">Icon Label:</label>
+                        <input type="text" id="icon" name="icon" value="DDS" />
+                    </div>
+                    <div class="form-field">
+                        <label for="iconFile">Icon File:</label>
+                        <input type="file" id="iconFile" name="iconFile" accept="image/*" />
+                    </div>
+                </fieldset>
+
+                <div class="form-actions">
+                    <button type="button" id="downloadBtn" class="btn btn-primary">Download Card</button>
+                </div>
+            </form>
+        </aside>
+
+        <main class="preview-area">
+            <div class="preview-container">
+                <img id="cardPreview" src="/cards/card.png?card_type=ability&title=New%20Card&creature=Существо&description=Описание%20способности" alt="Card Preview" class="card-preview" />
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

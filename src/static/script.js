@@ -10,6 +10,11 @@
   const creatureField = document.getElementById('creature-field');
   const phasesField = document.getElementById('phases-field');
   const rpField = document.getElementById('rp-field');
+  const crystalField = document.getElementById('crystal-field');
+  const cloudField = document.getElementById('cloud-field');
+  const clockField = document.getElementById('clock-field');
+  const unlocksField = document.getElementById('unlocks-field');
+  const requirementsField = document.getElementById('requirements-field');
   let timeoutId = null;
   let currentCardType = 'ability';
 
@@ -24,6 +29,11 @@
     creatureField.style.display = cardType === 'ability' || cardType === 'air-unit' ? '' : 'none';
     phasesField.style.display = cardType === 'ability' ? '' : 'none';
     rpField.style.display = cardType === 'air-unit' ? '' : 'none';
+    crystalField.style.display = cardType === 'building' ? '' : 'none';
+    cloudField.style.display = cardType === 'building' ? '' : 'none';
+    clockField.style.display = cardType === 'building' ? '' : 'none';
+    unlocksField.style.display = cardType === 'building' ? '' : 'none';
+    requirementsField.style.display = cardType === 'building' ? '' : 'none';
   };
 
   const refreshPreview = () => {
@@ -51,6 +61,15 @@
     // Add RP value if visible (air-unit)
     if (currentCardType === 'air-unit') {
       params.set('rp_value', formData.get('rp_value')?.toString() ?? '5');
+    }
+
+    // Add building-specific fields if visible (building)
+    if (currentCardType === 'building') {
+      params.set('crystal', formData.get('crystal')?.toString() ?? '0');
+      params.set('cloud', formData.get('cloud')?.toString() ?? '0');
+      params.set('clock', formData.get('clock')?.toString() ?? '0');
+      params.set('unlocks', formData.get('unlocks')?.toString() ?? '');
+      params.set('requirements', formData.get('requirements')?.toString() ?? '');
     }
 
     const url = `/cards/card.png?${params.toString()}`;
@@ -143,6 +162,11 @@
   if (urlParams.has('icon')) form.querySelector('[name=\"icon\"]').value = urlParams.get('icon');
   if (urlParams.has('description')) form.querySelector('[name=\"description\"]').value = urlParams.get('description');
   if (urlParams.has('rp_value')) form.querySelector('[name=\"rp_value\"]').value = urlParams.get('rp_value');
+  if (urlParams.has('crystal')) form.querySelector('[name=\"crystal\"]').value = urlParams.get('crystal');
+  if (urlParams.has('cloud')) form.querySelector('[name=\"cloud\"]').value = urlParams.get('cloud');
+  if (urlParams.has('clock')) form.querySelector('[name=\"clock\"]').value = urlParams.get('clock');
+  if (urlParams.has('unlocks')) form.querySelector('[name=\"unlocks\"]').value = urlParams.get('unlocks');
+  if (urlParams.has('requirements')) form.querySelector('[name=\"requirements\"]').value = urlParams.get('requirements');
   if (urlParams.has('card_type')) {
     const cardType = urlParams.get('card_type');
     const typeButton = document.querySelector(`.type-button[data-type=\"${cardType}\"]`);

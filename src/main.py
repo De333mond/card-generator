@@ -614,6 +614,274 @@ def generate_air_unit_card_png(
     return _render_html_to_png(html_content)
 
 
+def _render_building_card_html(
+    title: str,
+    crystal: int = 0,
+    cloud: int = 0,
+    clock: int = 0,
+    description: str = "",
+    unlocks: str = "",
+    requirements: str = "",
+    icon_label: str = "",
+    icon_data: str = "",
+) -> str:
+    def encoded(value: str) -> str:
+        return html.escape(value, quote=True)
+
+    icon_uri = _icon_data_uri(icon_data)
+    icon_html = (
+        f"<img class='building-card-icon' src='{encoded(icon_uri)}' alt='Icon' />"
+        if icon_uri
+        else f"<div class='building-card-icon-placeholder'>{encoded(icon_label[:3] or 'BLD')}</div>"
+    )
+
+    safe_description = encoded(description.strip() or "Описание здания")
+    safe_description = safe_description.replace("\n", "<br />")
+    
+    safe_unlocks = encoded(unlocks.strip() or "")
+    safe_unlocks = safe_unlocks.replace("\n", "<br />")
+    
+    safe_requirements = encoded(requirements.strip() or "")
+    safe_requirements = safe_requirements.replace("\n", "<br />")
+
+    # Generate 10 numbered squares
+    squares_html = "".join(
+        f"<div class='building-square'>{i}</div>" for i in range(1, 11)
+    )
+
+    crystal_icon = _svg_markup("crystal.svg")
+    cloud_icon = _svg_markup("cloud.svg")
+    clock_icon = _svg_markup("clock.svg")
+
+    return f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <style>
+        * {{ box-sizing: border-box; }}
+        html, body {{ margin: 0; padding: 0; width: 100%; height: 100%; }}
+        body {{
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(circle at top left, rgba(89, 115, 174, 0.25), transparent 34%),
+                radial-gradient(circle at top right, rgba(219, 166, 71, 0.18), transparent 28%),
+                linear-gradient(180deg, #07101f 0%, #0a1224 100%);
+            color: #eef3ff;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }}
+        .card {{
+            width: 900px;
+            height: 1400px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 44px;
+            background:
+                linear-gradient(180deg, rgba(18, 28, 56, 0.32), rgba(16, 24, 45, 0.1)),
+                linear-gradient(180deg, #11182d 0%, #1e2a4a 100%);
+            box-shadow: 0 36px 120px rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(167, 186, 224, 0.34);
+            padding: 48px;
+        }}
+        .card::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 0%, rgba(252, 230, 145, 0.16), transparent 26%),
+                radial-gradient(circle at 80% 8%, rgba(123, 152, 220, 0.2), transparent 24%);
+            pointer-events: none;
+        }}
+        .panel-shadow {{
+            position: absolute;
+            inset: 48px;
+            border-radius: 44px;
+            box-shadow: inset 0 0 0 1px rgba(167, 186, 224, 0.18), 0 14px 0 rgba(0, 0, 0, 0.12);
+            pointer-events: none;
+        }}
+        .card-content {{ position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }}
+        
+        .building-header {{
+            display: flex;
+            gap: 28px;
+            margin-bottom: 28px;
+            min-height: 220px;
+            align-items: flex-start;
+        }}
+        
+        .building-title-area {{
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            max-width: calc(100% - 248px - 28px);
+        }}
+        .building-title {{
+            font-size: 56px;
+            font-weight: 700;
+            color: #f5f8ff;
+            margin: 0 0 18px;
+            line-height: 1.05;
+            text-align: left;
+            word-break: break-word;
+        }}
+        
+        .building-stats {{
+            display: flex;
+            gap: 24px;
+            font-size: 28px;
+            color: #aabbdc;
+        }}
+        
+        .building-stat {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+        
+        .building-stat-icon {{
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fadc61;
+        }}
+        
+        .building-stat-icon svg {{
+            width: 100%;
+            height: 100%;
+            display: block;
+        }}
+        
+        .building-card-icon {{
+            width: 220px;
+            height: 220px;
+            border-radius: 24px;
+            background: rgba(34, 46, 72, 0.98);
+            border: 4px solid rgba(116, 136, 180, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            object-fit: contain;
+            padding: 12px;
+            flex-shrink: 0;
+        }}
+        
+        .building-card-icon-placeholder {{
+            font-size: 48px;
+            font-weight: 700;
+            color: #eff5ff;
+        }}
+        
+        .building-text-field {{
+            background: rgba(30, 42, 74, 0.98);
+            border-radius: 16px;
+            padding: 18px 22px;
+            margin-bottom: 16px;
+            min-height: 100px;
+        }}
+        
+        .building-text-field h3 {{
+            margin: 0 0 10px;
+            font-size: 20px;
+            color: #c6d6f2;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        
+        .building-text-field p {{
+            margin: 0;
+            font-size: 20px;
+            line-height: 1.5;
+            color: #f2f5fc;
+            word-break: break-word;
+        }}
+        
+        .building-squares {{
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 8px;
+            padding-top: 12px;
+            margin-top: auto;
+        }}
+        
+        .building-square {{
+            aspect-ratio: 1 / 1;
+            background: rgba(34, 46, 72, 0.98);
+            border: 2px solid rgba(116, 136, 180, 0.6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #aabbdc;
+        }}
+    </style>
+</head>
+<body>
+    <section class="card" id="card">
+        <div class="panel-shadow"></div>
+        <div class="card-content">
+            <div class="building-header">
+                <div class="building-title-area">
+                    <h1 class="building-title">{encoded(title)}</h1>
+                    <div class="building-stats">
+                        <div class="building-stat">
+                            <span class="building-stat-icon">{crystal_icon}</span>
+                            <span>{crystal}</span>
+                        </div>
+                        <div class="building-stat">
+                            <span class="building-stat-icon">{cloud_icon}</span>
+                            <span>{cloud}</span>
+                        </div>
+                        <div class="building-stat">
+                            <span class="building-stat-icon">{clock_icon}</span>
+                            <span>{clock}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="building-card-icon">{icon_html}</div>
+            </div>
+            
+            <div class="building-text-field">
+                <h3>Описание</h3>
+                <p>{safe_description}</p>
+            </div>
+            
+            {f"<div class='building-text-field'><h3>Разблокирует</h3><p>{safe_unlocks}</p></div>" if safe_unlocks else ""}
+            
+            {f"<div class='building-text-field'><h3>Требования</h3><p>{safe_requirements}</p></div>" if safe_requirements else ""}
+            
+            <div class="building-squares">
+                {squares_html}
+            </div>
+        </div>
+    </section>
+</body>
+</html>"""
+
+
+def generate_building_card_png(
+    title: str,
+    crystal: int = 0,
+    cloud: int = 0,
+    clock: int = 0,
+    description: str = "",
+    unlocks: str = "",
+    requirements: str = "",
+    icon_label: str = "",
+    icon_data: str = "",
+) -> bytes:
+    html_content = _render_building_card_html(
+        title, crystal, cloud, clock, description, unlocks, requirements, icon_label, icon_data
+    )
+    return _render_html_to_png(html_content)
+
+
 def _render_html_to_png(html_content: str) -> bytes:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True, args=["--no-sandbox"])
@@ -736,7 +1004,29 @@ def card_png(request: Request) -> Response:
             media_type="image/png",
             headers={"Content-Disposition": _download_header_value(title)},
         )
-    elif card_type == "building" or card_type == "unit":
+    elif card_type == "building":
+        try:
+            crystal = int(_query_value(request, "crystal", "0"))
+        except ValueError:
+            crystal = 0
+        try:
+            cloud = int(_query_value(request, "cloud", "0"))
+        except ValueError:
+            cloud = 0
+        try:
+            clock = int(_query_value(request, "clock", "0"))
+        except ValueError:
+            clock = 0
+        unlocks = _query_value(request, "unlocks", "")
+        requirements = _query_value(request, "requirements", "")
+        return Response(
+            generate_building_card_png(
+                title, crystal, cloud, clock, description, unlocks, requirements, icon_label, icon_data
+            ),
+            media_type="image/png",
+            headers={"Content-Disposition": _download_header_value(title)},
+        )
+    elif card_type == "unit":
         # Placeholder: return ability card for now
         creature = _query_value(request, "creature", "Юнит")
         phases = _phase_flags(request)

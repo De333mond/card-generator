@@ -52,6 +52,26 @@
           <label for="rp-value">РП значение</label>
           <input id="rp-value" name="rp_value" type="number" value="5" />
         </div>
+        <div class="field" id="crystal-field" style="display: none;">
+          <label for="crystal">Значение кристалла</label>
+          <input id="crystal" name="crystal" type="number" value="0" />
+        </div>
+        <div class="field" id="cloud-field" style="display: none;">
+          <label for="cloud">Значение облака</label>
+          <input id="cloud" name="cloud" type="number" value="0" />
+        </div>
+        <div class="field" id="clock-field" style="display: none;">
+          <label for="clock">Значение времени</label>
+          <input id="clock" name="clock" type="number" value="0" />
+        </div>
+        <div class="field" id="unlocks-field" style="display: none;">
+          <label for="unlocks">Разблокирует</label>
+          <textarea id="unlocks" name="unlocks"></textarea>
+        </div>
+        <div class="field" id="requirements-field" style="display: none;">
+          <label for="requirements">Требования</label>
+          <textarea id="requirements" name="requirements"></textarea>
+        </div>
         <div class="actions">
           <button class="button primary" type="submit" onclick="event.preventDefault(); return false;">Обновить
             превью</button>
